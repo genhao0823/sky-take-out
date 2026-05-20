@@ -76,6 +76,7 @@ public class AutoFillAspect {
                 setUpdateUser.invoke(entity, currentId);
             } catch (Exception e) {
 //                throw new RuntimeException(e);
+                e.printStackTrace();
             }
 
         }
