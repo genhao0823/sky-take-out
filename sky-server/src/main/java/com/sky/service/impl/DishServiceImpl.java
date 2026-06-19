@@ -17,12 +17,13 @@ import com.sky.vo.DishVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -37,6 +38,13 @@ public class DishServiceImpl implements com.sky.service.DishService {
 
     @Autowired
     private SetmealDishMapper setmealDishMapper;
+
+    /**
+     * 用于操作Redis缓存。
+     * 当前业务中使用它缓存C端按分类查询出来的菜品列表。
+     */
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     //新增菜品和对应的口味
     @Override
@@ -63,6 +71,9 @@ public class DishServiceImpl implements com.sky.service.DishService {
             //向口味表插入n条数据
             dishFlavorMapper.insertBatch(flavors);
         }
+
+        // 菜品数据发生变化后，删除C端菜品缓存，保证用户下次查询到最新数据。
+        cleanCache("dish_*");
     }
 
     /**
@@ -112,9 +123,8 @@ public class DishServiceImpl implements com.sky.service.DishService {
         //根据菜品id集合批量删除口味数据
         dishFlavorMapper.deleteByDishIds(ids);
 
-
-
-
+        // 菜品数据发生变化后，删除C端菜品缓存，保证用户下次查询到最新数据。
+        cleanCache("dish_*");
     }
 
     /**
@@ -162,19 +172,46 @@ public class DishServiceImpl implements com.sky.service.DishService {
             //向口味表插入n条数据
             dishFlavorMapper.insertBatch(flavors);
         }
+
+        // 菜品数据发生变化后，删除C端菜品缓存，保证用户下次查询到最新数据。
+        cleanCache("dish_*");
     }
 
 
-     /**
-     * 条件查询菜品和口味
-     * @param dish
-     * @return
+    /**
+     * 根据分类id查询起售中的菜品和口味。
+     *
+     * 业务流程：
+     * 1. 根据分类id拼接Redis缓存key，例如 dish_1。
+     * 2. 先查询Redis，如果缓存中存在该分类菜品，直接返回，避免重复查询数据库。
+     * 3. 如果Redis中不存在缓存，则构造Dish查询条件，只查询当前分类下起售中的菜品。
+     * 4. 查询数据库中的菜品基本信息，再逐个查询菜品口味并封装成DishVO。
+     * 5. 将数据库查询结果写入Redis，后续同分类查询可以直接命中缓存。
+     *
+     * @param categoryId 分类id
+     * @return 当前分类下起售中的菜品和口味列表
      */
-    public List<DishVO> listWithFlavor(Dish dish) {
+    @Override
+    public List<DishVO> listWithFlavor(Long categoryId) {
+        // 按分类缓存菜品列表，不同分类使用不同key，互不影响。
+        String key = "dish_" + categoryId;
+
+        // 先查Redis缓存；命中缓存时直接返回，不再访问数据库。
+        List<DishVO> dishVOList = (List<DishVO>) redisTemplate.opsForValue().get(key);
+        if (dishVOList != null) {
+            return dishVOList;
+        }
+
+        // 缓存未命中时，构造查询条件：只查询当前分类下起售中的菜品。
+        Dish dish = new Dish();
+        dish.setCategoryId(categoryId);
+        dish.setStatus(StatusConstant.ENABLE);
+
         List<Dish> dishList = dishMapper.list(dish);
 
-        List<DishVO> dishVOList = new ArrayList<>();
+        dishVOList = new ArrayList<>();
 
+        // 菜品基本信息来自dish表，口味信息来自dish_flavor表，需要组装成前端需要的DishVO。
         for (Dish d : dishList) {
             DishVO dishVO = new DishVO();
             BeanUtils.copyProperties(d,dishVO);
@@ -186,6 +223,23 @@ public class DishServiceImpl implements com.sky.service.DishService {
             dishVOList.add(dishVO);
         }
 
+        // 数据库查询完成后写入Redis，下次查询同分类菜品时可以直接从缓存返回。
+        redisTemplate.opsForValue().set(key, dishVOList);
+
         return dishVOList;
+    }
+
+    /**
+     * 清理菜品缓存。
+     * 后台新增、修改、删除菜品后，原来的分类缓存可能已经不是最新数据，
+     * 因此统一删除 dish_* 缓存，让下一次C端查询重新查数据库并回写Redis。
+     *
+     * @param pattern Redis key匹配规则，例如 dish_*
+     */
+    private void cleanCache(String pattern) {
+        Set keys = redisTemplate.keys(pattern);
+        if (keys != null && keys.size() > 0) {
+            redisTemplate.delete(keys);
+        }
     }
 }

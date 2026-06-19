@@ -15,6 +15,11 @@ spring:
       url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: ${sky.datasource.username}
       password: ${sky.datasource.password}
+      test-while-idle: true
+      test-on-borrow: false
+      validation-query: SELECT 1
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
   redis:
     host: ${sky.redis.host}
     port: ${sky.redis.port}
@@ -40,12 +45,12 @@ logging:
 sky:
   jwt:
     # 设置jwt签名加密时使用的秘钥
-    admin-secret-key: itcast
+    admin-secret-key: ${sky.jwt-secret.admin}
     # 设置jwt过期时间
     admin-ttl: 7200000
     # 设置前端传递过来的令牌名称
     admin-token-name: token
-    user-secret-key: itheima
+    user-secret-key: ${sky.jwt-secret.user}
     user-ttl: 7200000
     user-token-name: authentication
   alioss:

@@ -1,7 +1,5 @@
 package com.sky.controller.user;
 
-import com.sky.constant.StatusConstant;
-import com.sky.entity.Dish;
 import com.sky.result.Result;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
@@ -23,20 +21,17 @@ public class DishController {
     private DishService dishService;
 
     /**
-     * 根据分类id查询菜品
+     * 根据分类id查询菜品。
+     * Controller层只负责接收请求参数并调用Service，
+     * 具体的起售状态过滤、Redis缓存、数据库查询都交给业务层处理。
      *
-     * @param categoryId
-     * @return
+     * @param categoryId 分类id
+     * @return 当前分类下的起售菜品列表
      */
     @GetMapping("/list")
     @ApiOperation("根据分类id查询菜品")
     public Result<List<DishVO>> list(Long categoryId) {
-        Dish dish = new Dish();
-        dish.setCategoryId(categoryId);
-        dish.setStatus(StatusConstant.ENABLE);//查询起售中的菜品
-
-        List<DishVO> list = dishService.listWithFlavor(dish);
-
+        List<DishVO> list = dishService.listWithFlavor(categoryId);
         return Result.success(list);
     }
 

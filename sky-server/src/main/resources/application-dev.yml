@@ -18,6 +18,9 @@ sky:
     password: '1024.'
     database: 10
 
+  jwt-secret:
+    admin: itcast
+    user: itheima
   wechat:
     appid: wx9c62dde540ef7f7d
     secret: 64d42368b155f121442af2a288037a59
