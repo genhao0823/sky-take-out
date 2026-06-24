@@ -3,7 +3,7 @@
 <mapper namespace="com.sky.mapper.AddressBookMapper">
 
     <select id="list" parameterType="AddressBook" resultType="AddressBook">
-        select * from address_book
+        select id, user_id, consignee, sex, phone, province_code, province_name, city_code, city_name, district_code, district_name, detail, label, is_default from address_book
         <where>
             <if test="userId != null">
                 and user_id = #{userId}

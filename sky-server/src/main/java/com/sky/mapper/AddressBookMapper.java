@@ -30,7 +30,7 @@ public interface AddressBookMapper {
      * @param id
      * @return
      */
-    @Select("select * from address_book where id = #{id}")
+    @Select("select id, user_id, consignee, sex, phone, province_code, province_name, city_code, city_name, district_code, district_name, detail, label, is_default from address_book where id = #{id}")
     AddressBook getById(Long id);
 
     /**

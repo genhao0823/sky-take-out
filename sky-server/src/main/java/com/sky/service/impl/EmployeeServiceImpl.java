@@ -96,10 +96,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     //员工分页查询
     @Override
     public PageResult pageQuery(EmployeePageQueryDTO employeePageQueryDTO) {
-        //select * from employee limit 0,10
-        //进行分页查询
         PageHelper.startPage(employeePageQueryDTO.getPage(),employeePageQueryDTO.getPageSize());
-        employeeMapper.pageQuery(employeePageQueryDTO);
         Page<Employee> page = employeeMapper.pageQuery(employeePageQueryDTO);
         long total = page.getTotal();
         List<Employee> records = page.getResult();

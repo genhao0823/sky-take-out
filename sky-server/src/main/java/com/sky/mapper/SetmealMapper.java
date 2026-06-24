@@ -31,6 +31,6 @@ public interface SetmealMapper {
 
     Page<SetmealVO> pageQuery(SetmealPageQueryDTO setmealPageQueryDTO);
 
-    @Select("select * from setmeal where id = #{id}")
+    @Select("select id, category_id, name, price, status, description, image, create_time, update_time, create_user, update_user from setmeal where id = #{id}")
     Setmeal getById(Long id);
 }
